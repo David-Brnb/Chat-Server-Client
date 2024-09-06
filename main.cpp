@@ -1,7 +1,16 @@
 #include <iostream> 
+#include "Server.h"
 
 using namespace std; 
 
 int main(){
-    cout << "HI" << endl;
+    // Crear una instancia del servidor en el puerto 8080
+    Server myServer(1026);
+
+    // Iniciar el servidor
+    myServer.start();
+
+    return 0;
+
+    // cout << "HI" << endl;
 }

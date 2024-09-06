@@ -48,6 +48,7 @@ void Server::acceptClients(){
     char buffer[1024];
     while(true){
         int clientSocket = accept(*serverSocket, (struct sockaddr*)&address, (socklen_t *)&addrLen);
+
         if(clientSocket < 0){
             std::cerr << "Error al aceptar cliente" << std::endl;
             continue;
@@ -55,8 +56,52 @@ void Server::acceptClients(){
 
         std::cout << "Cliente Conectado!" << std::endl;
 
+        {
+            std::lock_guard<std::mutex> lock(clientsMutex);
+            clientSockets[clientSocket] = "";
+
+        }
+
         //Crearmos un nuevo hilo para manejar al cliente
         clients.emplace_back(&Server::handleClient, this, clientSocket);
     }
+}
+
+void Server::handleClient(int clientSocket){
+    char buffer[1024];
+    
+    while(true){
+        // Leemos del socket del cliente
+        int bites = recv(clientSocket, buffer, sizeof(buffer), 0); //0
+
+        // si existe error entonces avisamos y cerramos el socket del cliente
+        if(bites <= 0){
+            std::cout << "Cliente desconectado." << std::endl;
+            close(clientSocket);
+
+            {
+                std::lock_guard<std::mutex> lock(clientsMutex);
+                clientSockets.erase(clientSocket);
+            }
+            break;
+        }
+
+        //Procesar y responder
+        buffer[bites] = '\0'; //
+        std::string mensaje = buffer;
+
+        //Imprimos lo que dice dentro de nuestro server
+        std::cout << "Cliente " << clientSocket << " dice: " << mensaje << std::endl;
+
+        // Responder al cliente
+        std::string response = "Mensaje recibido del cliente " + std::to_string(clientSocket) + ": " + mensaje + "\n";
+
+        for(auto &socket: clientSockets){
+            if(socket.first != clientSocket){
+                send(socket.first, response.c_str(), response.size(), 0);
+            }
+        }
+    }
+
 }
 
