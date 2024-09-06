@@ -29,17 +29,20 @@ class Server{
     /*
         Estos métodos son privados dado que el servidor 
         será el único que los utilice internamente.
-    */
-        void setUpSocket();
+    */  
+
         void acceptClients();
         void handleClient(int clientSocket);
-        //void sendMessage(int clientSocket, const std::string& message);
 
     public:
     //Constructor, destructor y metodo de inicialización
         Server(int port);
 
         ~Server(){
+            if(serverSocket && *serverSocket>=0){
+                close(*serverSocket);
+            }
+
             this->port = 0;
         }
 
