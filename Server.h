@@ -16,6 +16,9 @@
 #include <unistd.h> // Manejo de sockets
 #include <cstring> // Para memset
 #include <iostream> // Para std::cerr
+#include <unordered_map>
+#include <unordered_set>
+#include <mutex>
 
 
 class Server{
@@ -25,6 +28,11 @@ class Server{
         struct sockaddr_in address;
         std::unique_ptr<int> serverSocket;
         std::vector<std::thread> clients;
+
+        std::unordered_map<int, std::string> clientSockets;
+
+        //Nos sirve para manejar los clientes en los hilos. 
+        std::mutex clientsMutex;
 
     /*
         Estos métodos son privados dado que el servidor 
