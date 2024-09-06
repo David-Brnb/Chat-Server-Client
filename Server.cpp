@@ -36,8 +36,27 @@ Server::Server(int port){
         std::cerr << "Error al escuchar en el socket" << std::endl;
         exit(EXIT_FAILURE);
     }
+ 
+}
 
+void Server::start() {
+    std::cout << "Servidor iniciado, esperando conexiones..." << std::endl;
+    acceptClients();  // Inicia la aceptación de clientes
+}
 
-    
+void Server::acceptClients(){
+    char buffer[1024];
+    while(true){
+        int clientSocket = accept(*serverSocket, (struct sockaddr*)&address, (socklen_t *)&addrLen);
+        if(clientSocket < 0){
+            std::cerr << "Error al aceptar cliente" << std::endl;
+            continue;
+        }
+
+        std::cout << "Cliente Conectado!" << std::endl;
+
+        //Crearmos un nuevo hilo para manejar al cliente
+        clients.emplace_back(&Server::handleClient, this, clientSocket);
+    }
 }
 
