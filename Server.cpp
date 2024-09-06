@@ -3,11 +3,7 @@
 
 // using namespace std; 
 
-void Server::setUpSocket(){
-    // socket();
-}
-
- Server::Server(int port){
+Server::Server(int port){
     serverSocket = std::make_unique<int>(socket(AF_INET, SOCK_STREAM, 0));
     
     if(*serverSocket < 0){
@@ -25,7 +21,23 @@ void Server::setUpSocket(){
     addrLen = sizeof(address);
 
     //vincular el socket
-    int concexion = bind(*serverSocket, (struct sockaddr*)&address, sizeof(address));
+    int conexion = bind(*serverSocket, (struct sockaddr*)&address, sizeof(address));
     
+    if(conexion < 0){
+        close(*serverSocket);
+        std::cerr << "Error al vincular el socket" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+    int listener = listen(*serverSocket, 5);
+
+    if(listener < 0){
+        close(*serverSocket);
+        std::cerr << "Error al escuchar en el socket" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
+
     
 }
+
