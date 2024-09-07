@@ -7,7 +7,7 @@ Server::Server(int port){
     serverSocket = std::make_unique<int>(socket(AF_INET, SOCK_STREAM, 0));
     
     if(*serverSocket < 0){
-        std::cerr << "Error al crear el socket" << std::endl;
+        std::cerr << "Error al crear el socket\n" << std::endl;
         exit(EXIT_FAILURE);
     }
     
@@ -25,7 +25,7 @@ Server::Server(int port){
     
     if(conexion < 0){
         close(*serverSocket);
-        std::cerr << "Error al vincular el socket" << std::endl;
+        std::cerr << "Error al vincular el socket\n" << std::endl;
         exit(EXIT_FAILURE);
     }
 
@@ -33,7 +33,7 @@ Server::Server(int port){
 
     if(listener < 0){
         close(*serverSocket);
-        std::cerr << "Error al escuchar en el socket" << std::endl;
+        std::cerr << "Error al escuchar en el socket\n" << std::endl;
         exit(EXIT_FAILURE);
     }
  
@@ -44,26 +44,87 @@ void Server::start() {
     acceptClients();  // Inicia la aceptación de clientes
 }
 
+bool Server::registerUser(int clientSocket, std::string username, std::string status) {
+    // Usamos mutex para tener seguridad en el manejo de los hilos
+    std::lock_guard<std::mutex> lock(clientsMutex);
+
+    // Verifica si el nombre de usuario ya existe
+    if (clientNames.find(username) != clientNames.end()) {
+        std::string message = "Error: El nombre de usuario ya está en uso.\n";
+        send(clientSocket, message.c_str(), message.size(), 0);
+        return false;
+    }
+
+    // Crear un nuevo usuario y agregarlo al mapa
+    User newUser(username, status, clientSocket, 0);  // Sala inicial 0
+
+    clientSocketUser[clientSocket] = newUser;
+    clientNames.insert(username);
+
+    return true;
+}
+
 void Server::acceptClients(){
     char buffer[1024];
     while(true){
         int clientSocket = accept(*serverSocket, (struct sockaddr*)&address, (socklen_t *)&addrLen);
 
         if(clientSocket < 0){
-            std::cerr << "Error al aceptar cliente" << std::endl;
+            std::cerr << "Error al aceptar cliente\n" << std::endl;
             continue;
         }
 
         std::cout << "Cliente Conectado!" << std::endl;
 
-        {
-            std::lock_guard<std::mutex> lock(clientsMutex);
-            clientSockets[clientSocket] = "";
+        // Envía un mensaje al cliente para que ingrese un nombre de usuario
+        std::string promptName = "Ingrese su nombre de usuario: ";
+        send(clientSocket, promptName.c_str(), promptName.size(), 0);
 
+        char bufferName[1024];
+        int nameBytesReceived = recv(clientSocket, bufferName, sizeof(bufferName) - 1, 0);
+        std::string username;
+
+        if (nameBytesReceived > 0) {
+            bufferName[nameBytesReceived] = '\0';
+            username = bufferName;
+
+            // Eliminar espacios en blanco al final, incluyendo saltos de línea
+            username.erase(username.find_last_not_of(" \n\r\t")+1);
+            
+        } else {
+            // Cierra la conexión si no se recibe el nombre de usuario
+            close(clientSocket);
         }
 
-        //Crearmos un nuevo hilo para manejar al cliente
-        clients.emplace_back(&Server::handleClient, this, clientSocket);
+        std::string promptStatus = "Ingrese su estatus de usuario (Activo, Desconectado, Otro): ";
+        send(clientSocket, promptStatus.c_str(), promptStatus.size(), 0);
+
+        char bufferStatus[1024];
+        int statusBytesReceived = recv(clientSocket, bufferStatus, sizeof(bufferStatus) - 1, 0);
+        std::string status;
+
+        if (statusBytesReceived > 0) {
+            bufferStatus[statusBytesReceived] = '\0';
+            status = bufferStatus;
+
+            // Eliminar espacios en blanco al final, incluyendo saltos de línea
+            status.erase(status.find_last_not_of(" \n\r\t")+1);
+
+            if(registerUser(clientSocket, username, status)){
+                // Si el nombre es válido, se añade el cliente a la lista
+                clients.emplace_back(&Server::handleClient, this, clientSocket);
+
+                std::string promptSuccess = "Usuario registrado con exito!\n ";
+                send(clientSocket, promptStatus.c_str(), promptStatus.size(), 0);
+
+            } else {
+                close(clientSocket);
+            }
+            
+        } else {
+            // Cierra la conexión si no se recibe el nombre de usuario
+            close(clientSocket);
+        }
     }
 }
 
@@ -81,7 +142,8 @@ void Server::handleClient(int clientSocket){
 
             {
                 std::lock_guard<std::mutex> lock(clientsMutex);
-                clientSockets.erase(clientSocket);
+                clientNames.erase(clientSocketUser[clientSocket].getNombre());
+                clientSocketUser.erase(clientSocket);
             }
             break;
         }
@@ -91,12 +153,12 @@ void Server::handleClient(int clientSocket){
         std::string mensaje = buffer;
 
         //Imprimos lo que dice dentro de nuestro server
-        std::cout << "Cliente " << clientSocket << " dice: " << mensaje << std::endl;
+        std::cout << "- " << clientSocketUser[clientSocket].getNombre() << ": " << mensaje << std::endl;
 
         // Responder al cliente
-        std::string response = "Mensaje recibido del cliente " + std::to_string(clientSocket) + ": " + mensaje + "\n";
+        std::string response = "- " + clientSocketUser[clientSocket].getNombre() + ": " + mensaje + "\n";
 
-        for(auto &socket: clientSockets){
+        for(auto &socket: clientSocketUser){
             if(socket.first != clientSocket){
                 send(socket.first, response.c_str(), response.size(), 0);
             }
