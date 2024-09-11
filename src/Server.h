@@ -31,7 +31,8 @@ class Server{
         std::vector<std::thread> clients;
 
         std::unordered_map<int, User> clientSocketUser;
-        std::unordered_set<std::string> clientNames;
+        std::map<std::string, std::string> clientNamesStatus;
+        std::unordered_map<std::string, int> clientUserSocket;
 
         //Nos sirve para manejar los clientes en los hilos. 
         std::mutex clientsMutex;
