@@ -2,6 +2,7 @@
 #define USER_H
 
 #include <string>
+#include <nlohmann/json.hpp>
 
 struct User {
 private:
@@ -29,8 +30,11 @@ public:
     int getClientSocket();
     int getSala();
 
+    // Método para convertir el objeto User a JSON
+    std::string toJSON() const;
 
-
+    // Método para inicializar un objeto User a partir de JSON
+    void fromJSON(std::string& jsonString);
 
 };
 

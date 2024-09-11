@@ -76,9 +76,8 @@ void Server::acceptClients(){
 
         std::cout << "Cliente Conectado!" << std::endl;
 
-        // Envía un mensaje al cliente para que ingrese un nombre de usuario
-        std::string promptName = "Ingrese su nombre de usuario: ";
-        send(clientSocket, promptName.c_str(), promptName.size(), 0);
+
+        
 
         char bufferName[1024];
         int nameBytesReceived = recv(clientSocket, bufferName, sizeof(bufferName) - 1, 0);
@@ -88,34 +87,12 @@ void Server::acceptClients(){
             bufferName[nameBytesReceived] = '\0';
             username = bufferName;
 
-            // Eliminar espacios en blanco al final, incluyendo saltos de línea
-            username.erase(username.find_last_not_of(" \n\r\t")+1);
-            
-        } else {
-            // Cierra la conexión si no se recibe el nombre de usuario
-            close(clientSocket);
-        }
-
-        std::string promptStatus = "Ingrese su estatus de usuario (Activo, Desconectado, Otro): ";
-        send(clientSocket, promptStatus.c_str(), promptStatus.size(), 0);
-
-        char bufferStatus[1024];
-        int statusBytesReceived = recv(clientSocket, bufferStatus, sizeof(bufferStatus) - 1, 0);
-        std::string status;
-
-        if (statusBytesReceived > 0) {
-            bufferStatus[statusBytesReceived] = '\0';
-            status = bufferStatus;
-
-            // Eliminar espacios en blanco al final, incluyendo saltos de línea
-            status.erase(status.find_last_not_of(" \n\r\t")+1);
-
-            if(registerUser(clientSocket, username, status)){
+            if(registerUser(clientSocket, username, "Activo")){
                 // Si el nombre es válido, se añade el cliente a la lista
                 clients.emplace_back(&Server::handleClient, this, clientSocket);
 
-                std::string promptSuccess = "Usuario registrado con exito!\n ";
-                send(clientSocket, promptStatus.c_str(), promptStatus.size(), 0);
+                std::string promptName = "Usuario registrado con exito!\n";
+                send(clientSocket, promptName.c_str(), promptName.size(), 0);
 
             } else {
                 close(clientSocket);
@@ -125,6 +102,7 @@ void Server::acceptClients(){
             // Cierra la conexión si no se recibe el nombre de usuario
             close(clientSocket);
         }
+
     }
 }
 
@@ -153,10 +131,10 @@ void Server::handleClient(int clientSocket){
         std::string mensaje = buffer;
 
         //Imprimos lo que dice dentro de nuestro server
-        std::cout << "- " << clientSocketUser[clientSocket].getNombre() << ": " << mensaje << std::endl;
+        std::cout << clientSocketUser[clientSocket].getNombre() << ": " << mensaje << std::endl;
 
         // Responder al cliente
-        std::string response = "- " + clientSocketUser[clientSocket].getNombre() + ": " + mensaje + "\n";
+        std::string response = clientSocketUser[clientSocket].getNombre() + ": " + mensaje + "\n";
 
         for(auto &socket: clientSocketUser){
             if(socket.first != clientSocket){
