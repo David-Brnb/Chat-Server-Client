@@ -50,15 +50,17 @@ bool Server::registerUser(int clientSocket, std::string username, std::string st
     std::lock_guard<std::mutex> lock(clientsMutex);
 
     // Verifica si el nombre de usuario ya existe
-    if (clientNames.find(username) != clientNames.end()) {
+    if (clientNamesStatus[username] != "") {
         return false;
     }
 
     // Crear un nuevo usuario y agregarlo al mapa
     User newUser(username, status, clientSocket, 0);  // Sala inicial 0
 
+
     clientSocketUser[clientSocket] = newUser;
-    clientNames.insert(username);
+    clientUserSocket[username] = clientSocket;
+    clientNamesStatus[username] = status;
 
     return true;
 }
@@ -156,7 +158,8 @@ void Server::handleClient(int clientSocket){
 
             {
                 std::lock_guard<std::mutex> lock(clientsMutex);
-                clientNames.erase(clientSocketUser[clientSocket].getNombre());
+                clientNamesStatus.erase(clientSocketUser[clientSocket].getNombre());
+                clientUserSocket.erase(clientSocketUser[clientSocket].getNombre());
                 clientSocketUser.erase(clientSocket);
             }
             break;
@@ -177,12 +180,89 @@ void Server::handleClient(int clientSocket){
             * revisar el cierre bien
             */
             std::cerr << "Error al parsear JSON: " << e.what() << std::endl;
+            std::cout << "Cliente desconectado." << std::endl;
             close(clientSocket);
-            continue;
+
+            {
+                std::lock_guard<std::mutex> lock(clientsMutex);
+                clientNamesStatus.erase(clientSocketUser[clientSocket].getNombre());
+                clientUserSocket.erase(clientSocketUser[clientSocket].getNombre());
+                clientSocketUser.erase(clientSocket);
+            }
+            break;
         }
 
-        switch(jsonMessage["type"]){
+        // Cadena auxiliar para respuestas del servidor
+        std::string requestAnswer = "";
+
+        /* 
+        Cadena de condicionales donde se realiza el procesamiento de requests por parte del server
+        */
+        if(jsonMessage["type"] == "STATUS"){
             
+            bool diferentStatus = clientSocketUser[clientSocket].getEstuatus() != jsonMessage["status"];
+            bool validStatus = jsonMessage["status"] == "ACTIVE" || jsonMessage["status"] == "AWAY" || jsonMessage["status"] == "BUSY";
+
+            if(validStatus && diferentStatus){
+                requestAnswer = Message::createNewStatusMessage(clientSocketUser[clientSocket].getNombre(), jsonMessage["status"]).dump();
+                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+            }
+            
+
+        } else if(jsonMessage["type"] == "USERS") {
+            requestAnswer = Message::createUserListMessage(clientNamesStatus).dump();
+            send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+
+        } else if(jsonMessage["type"] == "TEXT"){
+            std::string username = jsonMessage["username"];
+            std::string message = jsonMessage["text"];
+
+            if(clientNamesStatus[username] == ""){
+                requestAnswer = Message::createNoSuchUserResponse(username).dump();
+                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+
+            } else {
+                requestAnswer = Message::createTextFromMessage(clientSocketUser[clientSocket].getNombre(), message).dump();
+                send(clientUserSocket[username], requestAnswer.c_str(), requestAnswer.size(), 0);
+
+            }
+
+        } else if(jsonMessage["type"] == "PUBLIC_TEXT"){
+            std::string username = clientSocketUser[clientSocket].getNombre();
+            std::string message = jsonMessage["text"];
+
+            requestAnswer = Message::createPublicTextFromMessage(username, message).dump();
+
+            for(auto &socket: clientSocketUser){
+                if(socket.first != clientSocket){
+                    send(socket.first, requestAnswer.c_str(), requestAnswer.size(), 0);
+                }
+            }
+
+
+        } else if(jsonMessage["type"] == "DISCONNECT"){
+            requestAnswer = Message::disconnectMessage(clientSocketUser[clientSocket].getNombre()).dump();
+
+            //add: desconexion de salas
+
+            for(auto &socket: clientSocketUser){
+                if(socket.first != clientSocket){
+                    send(socket.first, requestAnswer.c_str(), requestAnswer.size(), 0);
+                }
+            }
+
+            std::cout << "Cliente desconectado." << std::endl;
+            close(clientSocket);
+
+            {
+                std::lock_guard<std::mutex> lock(clientsMutex);
+                clientNamesStatus.erase(clientSocketUser[clientSocket].getNombre());
+                clientUserSocket.erase(clientSocketUser[clientSocket].getNombre());
+                clientSocketUser.erase(clientSocket);
+            }
+            break;
+
+
 
         }
 

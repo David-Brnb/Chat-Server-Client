@@ -42,7 +42,7 @@ public:
     }
 
     // Notificación de nuevo estado
-    static nlohmann::json createNewStatusMessage(std::string &username, std::string &status) {
+    static nlohmann::json createNewStatusMessage(std::string username, std::string status) {
         return {
             {"type", "NEW_STATUS"},
             {"username", username},
@@ -75,7 +75,7 @@ public:
     }
 
     // Respuesta a texto privado
-    static nlohmann::json createTextFromMessage(std::string &username, std::string &text) {
+    static nlohmann::json createTextFromMessage(std::string username, std::string &text) {
         return {
             {"type", "TEXT_FROM"},
             {"username", username},
@@ -258,6 +258,23 @@ public:
             {"extra", roomName}
         };
     }
+
+    // Método para crear una peticion de desconexion al servidor
+    static nlohmann::json disconnectRequest() {
+        return {
+            {"type", "DISCONNECT"}
+        };
+    }
+
+    // Método para crear un mensaje de desconexion a los usuarios
+    static nlohmann::json disconnectMessage(std::string username) {
+        return {
+            {"type", "DISCONNECT"},
+            {"username", username}
+        };
+    }
+
+
 
 
 
