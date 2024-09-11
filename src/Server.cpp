@@ -1,5 +1,6 @@
 #include <iostream> 
 #include "Server.h" 
+#include "Message.h"
 
 // using namespace std; 
 
@@ -50,8 +51,6 @@ bool Server::registerUser(int clientSocket, std::string username, std::string st
 
     // Verifica si el nombre de usuario ya existe
     if (clientNames.find(username) != clientNames.end()) {
-        std::string message = "Error: El nombre de usuario ya está en uso.\n";
-        send(clientSocket, message.c_str(), message.size(), 0);
         return false;
     }
 
@@ -79,28 +78,65 @@ void Server::acceptClients(){
 
         
 
-        char bufferName[1024];
-        int nameBytesReceived = recv(clientSocket, bufferName, sizeof(bufferName) - 1, 0);
-        std::string username;
+        
+        std::string username = "";
+        std::string promptName = "";
 
-        if (nameBytesReceived > 0) {
+        while(true){        
+            char bufferName[1024];
+            int nameBytesReceived = recv(clientSocket, bufferName, sizeof(bufferName) - 1, 0);
+
+            if (nameBytesReceived <= 0) {
+                // Cierra la conexión si no se recibe el nombre de usuario
+                close(clientSocket);
+                break;
+            }
+
             bufferName[nameBytesReceived] = '\0';
-            username = bufferName;
 
-            if(registerUser(clientSocket, username, "Activo")){
+            // Convertir el string recibido en un objeto JSON
+            nlohmann::json jsonMessage;
+
+            try {
+                jsonMessage = nlohmann::json::parse(bufferName);
+
+            } catch (nlohmann::json::parse_error& e) {
+                /*
+                * revisar el cierre bien
+                */
+
+                std::cerr << "Error al parsear JSON: " << e.what() << std::endl;
+                close(clientSocket);
+                continue;
+            }
+
+            
+            username = jsonMessage["username"];
+
+            if(registerUser(clientSocket, username, "Active")){
                 // Si el nombre es válido, se añade el cliente a la lista
                 clients.emplace_back(&Server::handleClient, this, clientSocket);
 
-                std::string promptName = "Usuario registrado con exito!\n";
+                promptName = Message::createIdentifyResponse("SUCCESS", username).dump();
                 send(clientSocket, promptName.c_str(), promptName.size(), 0);
 
+                // Mensaje de nuevo usuario
+                std::string response = Message::createNewUserMessage(username).dump();
+
+                for(auto &socket: clientSocketUser){
+                    if(socket.first != clientSocket){
+                        send(socket.first, response.c_str(), response.size(), 0);
+                    }
+                }
+
+                break;
+
             } else {
-                close(clientSocket);
+                promptName = Message::createIdentifyResponse("USER_ALREADY_EXISTS", username).dump();
+                send(clientSocket, promptName.c_str(), promptName.size(), 0);
+
             }
-            
-        } else {
-            // Cierra la conexión si no se recibe el nombre de usuario
-            close(clientSocket);
+             
         }
 
     }
@@ -130,17 +166,29 @@ void Server::handleClient(int clientSocket){
         buffer[bites] = '\0'; //
         std::string mensaje = buffer;
 
+        // Convertir el string recibido en un objeto JSON
+        nlohmann::json jsonMessage;
+
+        try {
+            jsonMessage = nlohmann::json::parse(buffer);
+
+        } catch (nlohmann::json::parse_error& e) {
+            /*
+            * revisar el cierre bien
+            */
+            std::cerr << "Error al parsear JSON: " << e.what() << std::endl;
+            close(clientSocket);
+            continue;
+        }
+
+        switch(jsonMessage["type"]){
+            
+
+        }
+
         //Imprimos lo que dice dentro de nuestro server
         std::cout << clientSocketUser[clientSocket].getNombre() << ": " << mensaje << std::endl;
 
-        // Responder al cliente
-        std::string response = clientSocketUser[clientSocket].getNombre() + ": " + mensaje + "\n";
-
-        for(auto &socket: clientSocketUser){
-            if(socket.first != clientSocket){
-                send(socket.first, response.c_str(), response.size(), 0);
-            }
-        }
     }
 
 }
