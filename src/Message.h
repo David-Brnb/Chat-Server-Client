@@ -16,7 +16,7 @@ public:
     }
 
     // Respuesta a la identificación
-    static nlohmann::json createIdentifyResponse(std::string &result, std::string &username) {
+    static nlohmann::json createIdentifyResponse(std::string result, std::string &username) {
         return {
             {"type", "RESPONSE"},
             {"request", "IDENTIFY"},
