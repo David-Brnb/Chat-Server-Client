@@ -14,6 +14,7 @@
 
 class Client {
 private:
+    bool waiting = false;
     bool registered = false; // Indica si el usuario fue registrado exitosamente
     std::condition_variable cv; // Variable de condición para sincronizar
     int clientSocket;
@@ -21,6 +22,7 @@ private:
     bool connected;
     std::thread listenerThread;
     std::mutex socketMutex;
+    std::vector<std::string> waitedMessages;
 
     void listenForMessages(); // Método para escuchar los mensajes del servidor
 

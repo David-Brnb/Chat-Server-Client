@@ -118,6 +118,16 @@ public:
         };
     }
 
+    // Método para crear un mensaje de respuesta a NewRoom 
+    static nlohmann::json createNewRoomResponse(std::string extra, std::string result) {
+        return {
+            {"type", "RESPONSE"},
+            {"request", "NEW_ROOM"},
+            {"result", result},
+            {"extra", extra}
+        };
+    }
+
     // Método para crear un mensaje de INVITE
     static nlohmann::json createInviteMessage(std::string &roomName, std::vector<std::string> &userNames) {
         return {
@@ -128,7 +138,7 @@ public:
     }
 
     // Método para crear un mensaje de INVITATION
-    static nlohmann::json createInvitationMessage(std::string &username, std::string &roomName) {
+    static nlohmann::json createInvitationMessage(std::string username, std::string roomName) {
         return {
             {"type", "INVITATION"},
             {"username", username},
@@ -136,23 +146,13 @@ public:
         };
     }
 
-    // Método para crear un mensaje de respuesta a INVITE (si la sala no existe)
-    static nlohmann::json createInviteResponseNoSuchRoom(std::string &roomName) {
+    // Método para crear un mensaje de respuesta a INVITE 
+    static nlohmann::json createInviteResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
             {"request", "INVITE"},
-            {"result", "NO_SUCH_ROOM"},
-            {"extra", roomName}
-        };
-    }
-
-    // Método para crear un mensaje de respuesta a INVITE (si un usuario no existe)
-    static nlohmann::json createInviteResponseNoSuchUser(std::string &username) {
-        return {
-            {"type", "RESPONSE"},
-            {"request", "INVITE"},
-            {"result", "NO_SUCH_USER"},
-            {"extra", username}
+            {"result", result},
+            {"extra", extra}
         };
     }
 
@@ -164,32 +164,22 @@ public:
         };
     }
 
-    // Método para crear un mensaje de respuesta a JOIN_ROOM (si el usuario se une con éxito)
-    static nlohmann::json createJoinRoomResponseSuccess(std::string &roomName) {
-        return {
-            {"type", "RESPONSE"},
-            {"request", "JOIN_ROOM"},
-            {"result", "SUCCESS"},
-            {"extra", roomName}
-        };
-    }
-
-    // Método para crear un mensaje de JOINED_ROOM para notificar a otros usuarios
-    static nlohmann::json createJoinedRoomMessage(std::string &roomName, std::string &username) {
-        return {
-            {"type", "JOINED_ROOM"},
-            {"roomname", roomName},
-            {"username", username}
-        };
-    }
-
-    // Método para crear un mensaje de respuesta a JOIN_ROOM (si la sala no existe)
-    static nlohmann::json createJoinRoomResponseNo(std::string &roomName, std::string &result) {
+    // Método para crear un mensaje de respuesta a JOIN_ROOM 
+    static nlohmann::json createJoinRoomResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
             {"request", "JOIN_ROOM"},
             {"result", result},
-            {"extra", roomName}
+            {"extra", extra}
+        };
+    }
+
+    // Método para crear un mensaje de JOINED_ROOM para notificar a otros usuarios
+    static nlohmann::json createJoinedRoomMessage(std::string roomName, std::string username) {
+        return {
+            {"type", "JOINED_ROOM"},
+            {"roomname", roomName},
+            {"username", username}
         };
     }
 

@@ -20,6 +20,7 @@
 #include <unordered_set>
 #include <mutex>
 #include "User.h"
+#include "Sala.h"
 
 
 class Server{
@@ -31,8 +32,10 @@ class Server{
         std::vector<std::thread> clients;
 
         std::unordered_map<int, User> clientSocketUser;
-        std::map<std::string, std::string> clientNamesStatus;
         std::unordered_map<std::string, int> clientUserSocket;
+        std::unordered_set<std::string> rooms;
+        std::unordered_map<std::string, Sala> nameRoom;
+        
 
         //Nos sirve para manejar los clientes en los hilos. 
         std::mutex clientsMutex;

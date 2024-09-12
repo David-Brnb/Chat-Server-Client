@@ -69,40 +69,63 @@ void Client::listenForMessages() {
             break;
         }
 
+        std::string answer;
+
         if(jsonMessage["type"] == "RESPONSE"){
             std::string user = jsonMessage["extra"];
             
             if(jsonMessage["request"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
-                std::cout << "El usuario " << user << " ha sido registrado con exito!" << std::endl;
+                answer = "El usuario " + user + " ha sido registrado con exito!";
+                std::cout << answer << std::endl;
 
                 registered = true;
 
             } else if(jsonMessage["request"] == "IDENTIFY" && jsonMessage["result"] == "USER_ALREADY_EXISTS"){
-                std::cout << "El usuario " << user << " ya existe, ingrese otro nombre." << std::endl;
+                answer = "El usuario " + user + " ya existe, ingrese otro nombre.";
+                std::cout << answer << std::endl;
                 registered = false;
 
             }
             
 
+        } else if(jsonMessage["type"] == "NEW_USER"){
+
+            std::string user = jsonMessage["username"];
+            answer = "Chat (general): da la bienvenida a " + user + " en el chat!\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+        
         } else if(jsonMessage["type"] == "NEW_STATUS") {
             std::string user = jsonMessage["username"];
             std::string status = jsonMessage["status"];
-            std::cout << "Ahora " << user << " esta " << status << std::endl;
+            answer = "Ahora " + user + " esta " + status + "\n";
+            
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
 
         } else if(jsonMessage["type"] == "USER_LIST"){
-            std::cout << "-- Usuarios en el servidor --" << "\n";
+            answer = "-- Usuarios en el servidor --\n";
             std::map<std::string, std::string> clientNamesStatus;
             clientNamesStatus = jsonMessage["users"];
 
             for(auto usr: clientNamesStatus){
-                std::cout << "  " << usr.first << " : " << usr.second << "\n";
+                answer+= "  " + usr.first + " : " + usr.second + "\n";
             }
 
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
         } else if(jsonMessage["type"] == "TEXT_FROM"){
-            std::cout << jsonMessage["username"] << " (directo): " << jsonMessage["text"] << "\n";
+            answer = jsonMessage["username"].get<std::string>() + " (directo): " + jsonMessage["text"].get<std::string>();
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
 
         } else if (jsonMessage["type"] == "PUBLIC_TEXT_FROM"){
-            std::cout << jsonMessage["username"] << " (general): " << jsonMessage["text"] << "\n";
+            answer = jsonMessage["username"].get<std::string>() + " (general): " + jsonMessage["text"].get<std::string>();
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
 
         } else {
             std::cout << mensaje << "\n";
@@ -134,7 +157,9 @@ void Client::run() {
 
         } 
 
-        std::cin >> input; 
+        std::cin >> input;
+
+        waiting = true; 
 
         if(input == "/Status"){
             std::string newStatus; 
@@ -161,12 +186,15 @@ void Client::run() {
 
             std::cout << "Indique si desea ver el listado de usuarios (SI - NO): ";
             std::cin >> seeUsers;
-            
+
+            waiting = false;
             if(seeUsers == "SI"){
                 sendMessage(Message::createUsersRequest());
             } 
 
             std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+            waiting = true;
 
             std::cout << "Indique el usuario al que enviará el mensaje: ";
             std::cin >> destinyUser;
@@ -215,6 +243,8 @@ void Client::run() {
         } else if(input == "/Disconnect"){
             nlohmann::json message = Message::disconnectRequest();
             sendMessage(message);
+            disconnect();
+            break;
 
         }
 
@@ -222,6 +252,13 @@ void Client::run() {
             disconnect();
             break;
         }
+
+        waiting = false; 
+
+        for(auto ans: waitedMessages){
+            std::cout << ans;
+        }
+        waitedMessages.clear();
     }
 }
 
