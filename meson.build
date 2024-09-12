@@ -1,12 +1,31 @@
-project('chat-app', 'cpp',
-  version: '0.1',
-  default_options: ['cpp_std=c++14'])
+project('chat-app', 'cpp', version : '1.0', default_options : ['cpp_std=c++17'])
 
-# Define la fuente del proyecto
-src = ['src/Server.cpp', 'src/User.cpp', 'src/main.cpp']
+# Ruta a los directorios del código fuente
+server_src = files(
+  'src/server/Server.cpp',
+  'src/server/User.cpp',
+  'src/server/main_server.cpp'
+)
 
-# Agregar la dependencia de nlohmann/json
-nlohmann_json = dependency('nlohmann_json', version: '>=3.9.1')
+client_src = files(
+  'src/client/Client.cpp',
+  'src/client/main_client.cpp'
+)
 
-# Crear el ejecutable
-executable('chat-server', src, dependencies: [nlohmann_json])
+# Incluye la librería json si la usas
+nlohmann_json = dependency('nlohmann_json', required : true)
+
+# Definimos el directorio de los headers compartidos
+inc_dir = include_directories('src/include')
+
+# Definimos el ejecutable del servidor
+executable('server', server_src,
+           install : true,
+           dependencies : [nlohmann_json],
+           include_directories: inc_dir)
+
+# Definimos el ejecutable del cliente
+executable('client', client_src,
+           install : true,
+           dependencies : [nlohmann_json],
+           include_directories: inc_dir)
