@@ -49,7 +49,9 @@ class Server{
         void handleClient(int clientSocket);
         void registerUsername();
         bool registerUser(int clientSocket, std::string username, std::string status);
-        void removeUserFromRooms(int clientSocket);
+        void removeUserInformation(int clientSocket);
+        void handleInvalidRequest(int clientSocket);
+        void sendMessage(const nlohmann::json& message, int destinitySocket);
 
     public:
     //Constructor, destructor y metodo de inicialización

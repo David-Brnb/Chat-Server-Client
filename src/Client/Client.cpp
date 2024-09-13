@@ -69,13 +69,12 @@ void Client::listenForMessages() {
         }
 
         std::string answer;
-        std::cout << mensaje << std::endl;
+        // std::cout << mensaje << std::endl;
 
         if(jsonMessage["type"] == "RESPONSE"){
             std::string user = jsonMessage["extra"];
             
             if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
-                // std::cout << mensaje << std::endl;
                 answer = "El usuario " + user + " ha sido registrado con exito!";
                 std::cout << answer << std::endl;
 
@@ -86,6 +85,18 @@ void Client::listenForMessages() {
                 std::cout << answer << std::endl;
                 registered = false;
 
+            } else if(jsonMessage["request"] == "Invalid"){
+                if(jsonMessage["result"] == "NOT_IDENTIFIED"){
+                    answer = "cerr: El usuario hizo request sin identificarse primero\n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "INVALID"){
+                    answer = "cerr: El usuario mando parametros incompletos\n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+                }
+                
             }
             
 
@@ -129,7 +140,7 @@ void Client::listenForMessages() {
             else std::cout << answer;
 
         } else {
-            std::cout << mensaje << "\n";
+            // std::cout << mensaje << "\n";
 
         }
 
@@ -146,12 +157,20 @@ void Client::run() {
 
         waiting = true; 
         if(input == "/Identify" && !registered){
-            std::cout << "Ingrese su nombre de identificación: ";
-            std::cin >> input;
+            while(true){
+                std::cout << "Ingrese su nombre de identificación: ";
+                std::cin >> input;
+
+                if(input.size() > 8){
+                    std::cout << "err: Max 8 caracteres \n";
+
+                } else {
+                    break;
+                }
+            }
 
             nlohmann::json message = Message::createIdentifyMessage(input);
             sendMessage(message);
-            std::cout << message.dump() << std::endl;
 
         } else if(input == "/Status"){
             std::string newStatus; 
@@ -159,9 +178,18 @@ void Client::run() {
             std::cout << " * ACTIVE \n";
             std::cout << " * AWAY \n";
             std::cout << " * BUSY \n";
-            std::cout << "Ingrese su nuevo estatus (escrito de la misma forma): ";
+            while(true){
+                std::cout << "Ingrese su nuevo estatus (escrito de la misma forma): ";
+                std::cin >> newStatus; 
 
-            std::cin >> newStatus; 
+                if(!(newStatus == "ACTIVE" || newStatus == "AWAY" || newStatus == "BUSY")){
+                    std::cout << "err: Status desconocido \n";
+
+                } else {
+                    break;
+                }
+            }
+            
 
             nlohmann::json message = Message::createStatusMessage(newStatus);
             sendMessage(message);
@@ -232,6 +260,29 @@ void Client::run() {
             nlohmann::json message = Message::createPublicTextMessage(fullMessage);
             sendMessage(message);
 
+        } else if(input == "/Create_Room"){
+            while(true){
+                std::cout << "Ingrese su nombre de la Sala: ";
+                std::cin >> input;
+
+                if(input.size() > 8){
+                    std::cout << "err: Max 8 caracteres \n";
+
+                } else {
+                    break;
+                }
+            }
+
+
+
+        } else if(false){
+            
+        } else if(false){
+            
+        } else if(false){
+            
+        } else if(false){
+            
         } else if(input == "/Disconnect"){
             nlohmann::json message = Message::disconnectRequest();
             sendMessage(message);
@@ -240,11 +291,6 @@ void Client::run() {
 
         } else {
             std::cout << "Ingresa un comando valido " << std::endl;
-        }
-
-        if (input == "/exit") {
-            disconnect();
-            break;
         }
 
         waiting = false; 

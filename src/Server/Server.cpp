@@ -47,12 +47,18 @@ void Server::start() {
     acceptClients();  // Inicia la aceptación de clientes
 }
 
+void Server::sendMessage(const nlohmann::json& message, int destinitySocket) {
+    std::lock_guard<std::mutex> lock(clientsMutex);
+    std::string msgString = message.dump()+'\0';
+    send(destinitySocket, msgString.c_str(), msgString.size(), 0);
+}
+
 bool Server::registerUser(int clientSocket, std::string username, std::string status) {
     // Usamos mutex para tener seguridad en el manejo de los hilos
     std::lock_guard<std::mutex> lock(clientsMutex);
 
     // Verifica si el nombre de usuario ya existe
-    if (clientUserSocket.find(username) != clientUserSocket.end()) {
+    if (clientUserSocket.find(username) != clientUserSocket.end() || clientSocketUser[clientSocket]) {
         return false;
     }
 
@@ -84,7 +90,7 @@ void Server::acceptClients(){
     }
 }
 
-void Server::removeUserFromRooms(int clientSocket) {
+void Server::removeUserInformation(int clientSocket) {
     std::string username = clientSocketUser[clientSocket]->getNombre();
     std::vector<std::string> deletedRooms;
 
@@ -112,6 +118,18 @@ void Server::removeUserFromRooms(int clientSocket) {
     clientSocketUser.erase(clientSocket);
 }
 
+void Server::handleInvalidRequest(int clientSocket) {
+    sendMessage(Message::noIdentifiedRequest(), clientSocket);
+
+    // Imprimir mensaje en el servidor
+    std::cout << "Enviando mensaje de INVALID a cliente " << clientSocket << " y cerrando la conexión." << std::endl;
+
+    if(clientSocketUser[clientSocket]) removeUserInformation(clientSocket);
+
+    close(clientSocket);
+}
+
+
 void Server::handleClient(int clientSocket){
     char buffer[1024];
     
@@ -124,7 +142,7 @@ void Server::handleClient(int clientSocket){
             std::cout << "Cliente desconectado." << std::endl;
             close(clientSocket);
 
-            removeUserFromRooms(clientSocket);
+            if(clientSocketUser[clientSocket]) removeUserInformation(clientSocket);
             break;
         }
 
@@ -146,7 +164,7 @@ void Server::handleClient(int clientSocket){
             std::cout << "Cliente desconectado." << std::endl;
             close(clientSocket);
 
-            removeUserFromRooms(clientSocket);
+            if(clientSocketUser[clientSocket]) removeUserInformation(clientSocket);
             break;
         }
 
@@ -158,26 +176,25 @@ void Server::handleClient(int clientSocket){
         Cadena de condicionales donde se realiza el procesamiento de requests por parte del server
         */
         if(type == "IDENTIFY"){
+            if (!jsonMessage.contains("username") ) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string username = jsonMessage["username"], promptName;
 
             if(registerUser(clientSocket, username, "Active")){
-
-                promptName = Message::createIdentifyResponse("SUCCESS", username).dump()+'\0';
-                send(clientSocket, promptName.c_str(), promptName.size(), 0);
-
-                // Mensaje de nuevo usuario
-                std::string response = Message::createNewUserMessage(username).dump()+'\0';
+                sendMessage(Message::createIdentifyResponse("SUCCESS", username), clientSocket);
 
                 for(auto &socket: clientSocketUser){
                     if(socket.first != clientSocket){
-                        send(socket.first, response.c_str(), response.size(), 0);
+                        sendMessage(Message::createNewUserMessage(username), socket.first);
                     }
                 }
 
             } else {
                 std::cerr << "El usuario '" << username << "' ya existe. Respondiendo al cliente." << std::endl;
-                promptName = Message::createIdentifyResponse("USER_ALREADY_EXISTS", username).dump() + '\0';
-                send(clientSocket, promptName.c_str(), promptName.size(), 0);
+                sendMessage(Message::createIdentifyResponse("USER_ALREADY_EXISTS", username), clientSocket);
 
             }
 
@@ -188,8 +205,11 @@ void Server::handleClient(int clientSocket){
             break; 
 
         } else if(type == "STATUS"){
-            /* cambiarlo en el usuario
-            */ 
+            if (!jsonMessage.contains("status") ) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::shared_ptr<User> usr = clientSocketUser[clientSocket];
 
             bool diferentStatus = usr->getEstuatus() != jsonMessage["status"];
@@ -197,47 +217,56 @@ void Server::handleClient(int clientSocket){
 
             if(validStatus && diferentStatus){
                 usr->setEstatus(jsonMessage["status"]);
-                requestAnswer = Message::createNewStatusMessage(usr->getNombre(), usr->getEstuatus()).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createNewStatusMessage(usr->getNombre(), usr->getEstuatus()), clientSocket);
             }
             
 
         } else if(type == "USERS") {
             std::map<std::string, std::string> users = nameRoom[""].obtenerEstatusUsuarios();
             
-            requestAnswer = Message::createUserListMessage(users).dump()+'\0';
-            send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+            sendMessage(Message::createUserListMessage(users), clientSocket);
 
         } else if(type == "TEXT"){
+            if (!jsonMessage.contains("username") || !jsonMessage.contains("text")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string username = jsonMessage["username"];
             std::string message = jsonMessage["text"];
 
             //Si el usuario no existe
             if(clientUserSocket.find(username) == clientUserSocket.end()){
-                requestAnswer = Message::createNoSuchUserResponse(username).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createNoSuchUserResponse(username), clientSocket);
 
             } else {
-                requestAnswer = Message::createTextFromMessage(clientSocketUser[clientSocket]->getNombre(), message).dump()+'\0';
-                send(clientUserSocket[username], requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createTextFromMessage(clientSocketUser[clientSocket]->getNombre(), message), clientUserSocket[username]);
 
             }
 
 
         } else if(type == "PUBLIC_TEXT"){
+            if (!jsonMessage.contains("text")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string username = clientSocketUser[clientSocket]->getNombre();
             std::string message = jsonMessage["text"];
 
-            requestAnswer = Message::createPublicTextFromMessage(username, message).dump()+'\0';
-
             for(auto &socket: clientSocketUser){
                 if(socket.first != clientSocket){
-                    send(socket.first, requestAnswer.c_str(), requestAnswer.size(), 0);
+                    sendMessage(Message::createPublicTextFromMessage(username, message), socket.first);
                 }
             }
 
 
         } else if(type == "NEW_ROOM"){
+            if (!jsonMessage.contains("roomname")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::shared_ptr<User> usr = clientSocketUser[clientSocket];
 
@@ -246,32 +275,33 @@ void Server::handleClient(int clientSocket){
 
                 nameRoom[roomname].agregarUsuario(usr);
 
-                requestAnswer = Message::createNewRoomResponse(roomname, "SUCCESS").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createNewRoomResponse(roomname, "SUCCESS"), clientSocket);
 
             } else {
-                requestAnswer = Message::createNewRoomResponse(roomname, "ROOM_ALREADY_EXISTS").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createNewRoomResponse(roomname, "ROOM_ALREADY_EXISTS"), clientSocket);
                 
             }
 
 
 
         } else if(type == "INVITE"){
+            if (!jsonMessage.contains("roomname") || !jsonMessage.contains("usernames")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::vector<std::string> usernames = jsonMessage["usernames"];
 
             if(rooms.count(roomname) <= 0 || !nameRoom[roomname].contieneUsuario(clientSocketUser[clientSocket]->getNombre())){
-                requestAnswer = Message::createInviteResponse(roomname, "NO_SUCH_ROOM").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createInviteResponse(roomname, "NO_SUCH_ROOM"), clientSocket);
 
             } else {
                 bool success = true; 
 
                 for(auto user: usernames){
                     if(clientUserSocket[user] == 0){
-                        requestAnswer = Message::createInviteResponse(user, "NO_SUCH_USER").dump()+'\0';
-                        send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                        sendMessage(Message::createInviteResponse(user, "NO_SUCH_USER"), clientSocket);
                         success = false; 
                         break; 
                     }
@@ -286,8 +316,7 @@ void Server::handleClient(int clientSocket){
 
                         if(!nameRoom[roomname].contieneUsuario(clientSocketUser[userSocket]->getNombre())){
                             userInvited->insertaInvitacionSala(roomname);
-                            requestAnswer = Message::createInvitationMessage(roomCreator->getNombre(), roomname).dump()+'\0';
-                            send(userSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                            sendMessage(Message::createInvitationMessage(roomCreator->getNombre(), roomname), userSocket);
 
                         }
                     }
@@ -295,52 +324,59 @@ void Server::handleClient(int clientSocket){
             }
 
         } else if(type == "JOIN_ROOM"){
+            if (!jsonMessage.contains("roomname")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::shared_ptr<User> user = clientSocketUser[clientSocket];
 
             if(rooms.count(roomname)>0 && user->contieneInvitacion(roomname)){
                 nameRoom[roomname].agregarUsuario(user);
 
-                requestAnswer = Message::createJoinRoomResponse(roomname, "SUCCESS").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createJoinRoomResponse(roomname, "SUCCESS"), clientSocket);
                 
                 for(auto elem: nameRoom[roomname].verUsuarios()){
-                    requestAnswer = Message::createJoinedRoomMessage(roomname, user->getNombre()).dump()+'\0';
-                    send(clientUserSocket[elem.first], requestAnswer.c_str(), requestAnswer.size(), 0);
+                    sendMessage(Message::createJoinedRoomMessage(roomname, user->getNombre()), clientUserSocket[elem.first]);
 
                 }
 
             } else if(rooms.count(roomname) <= 0){
-                requestAnswer = Message::createJoinRoomResponse(roomname, "NO_SUCH_ROOM").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createJoinRoomResponse(roomname, "NO_SUCH_ROOM"), clientSocket);
 
             } else if(!user->contieneInvitacion(roomname)){
-                requestAnswer = Message::createJoinRoomResponse(roomname, "NOT_INVITED").dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createJoinRoomResponse(roomname, "NOT_INVITED"), clientSocket);
 
             }
 
         } else if(type == "ROOM_USERS"){
+            if (!jsonMessage.contains("roomname")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::string username = clientSocketUser[clientSocket]->getNombre();
 
             if(rooms.count(roomname) > 0 && nameRoom[roomname].contieneUsuario(username)){
-
-                requestAnswer = Message::createRoomUserListMessage(roomname, nameRoom[roomname].obtenerEstatusUsuarios()).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createRoomUserListMessage(roomname, nameRoom[roomname].obtenerEstatusUsuarios()), clientSocket);
 
             } else if(rooms.count(roomname) <= 0){
-                requestAnswer = Message::createRoomUsersResponseNo("NO_SUCH_ROOM", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createRoomUsersResponseNo("NO_SUCH_ROOM", roomname), clientSocket);
                 
             } else if(!nameRoom[roomname].contieneUsuario(username)){
-                requestAnswer = Message::createRoomUsersResponseNo("NOT_JOINED", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createRoomUsersResponseNo("NOT_JOINED", roomname), clientSocket);
 
             }
             
 
         } else if(type == "ROOM_TEXT"){
+            if (!jsonMessage.contains("roomname") || !jsonMessage.contains("text")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::string text = jsonMessage["text"];
             std::string username = clientSocketUser[clientSocket]->getNombre();
@@ -351,23 +387,25 @@ void Server::handleClient(int clientSocket){
                 for(auto usr: currentRoom.verUsuarios()){
                     int currentSocket = clientUserSocket[usr.first];
 
-                    requestAnswer = Message::createRoomText(roomname, username, text).dump()+'\0';
-                    send(currentSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                    sendMessage(Message::createRoomText(roomname, username, text), currentSocket);
 
                 }
 
             } else if(rooms.count(roomname) <= 0){
-                requestAnswer = Message::createRoomTextResponse("NO_SUCH_ROOM", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createRoomTextResponse("NO_SUCH_ROOM", roomname), clientSocket);
                 
             } else if(!nameRoom[roomname].contieneUsuario(username)){
-                requestAnswer = Message::createRoomTextResponse("NOT_JOINED", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::createRoomTextResponse("NOT_JOINED", roomname), clientSocket);
 
             }
 
 
         } else if(type == "LEAVE_ROOM"){
+            if (!jsonMessage.contains("roomname")) {
+                handleInvalidRequest(clientSocket);
+                break;
+            }
+
             std::string roomname = jsonMessage["roomname"];
             std::string username = clientSocketUser[clientSocket]->getNombre();
             Sala currentRoom = nameRoom[roomname];
@@ -386,41 +424,40 @@ void Server::handleClient(int clientSocket){
 
                 for(auto usr: currentRoom.verUsuarios()){
                     int currentSocket = clientUserSocket[usr.first];
-
-                    requestAnswer = Message::createRoomText(roomname, username).dump()+'\0';
-                    send(currentSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                    sendMessage(Message::createRoomText(roomname, username), currentSocket);
 
                 }
 
             } else if(rooms.count(roomname) <= 0){
-                requestAnswer = Message::leaveRoomResponse("NO_SUCH_ROOM", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::leaveRoomResponse("NO_SUCH_ROOM", roomname), clientSocket);
                 
             } else if(!nameRoom[roomname].contieneUsuario(username)){
-                requestAnswer = Message::leaveRoomResponse("NOT_JOINED", roomname).dump()+'\0';
-                send(clientSocket, requestAnswer.c_str(), requestAnswer.size(), 0);
+                sendMessage(Message::leaveRoomResponse("NOT_JOINED", roomname), clientSocket);
 
             }
 
 
 
         } else if(type == "DISCONNECT"){
-            requestAnswer = Message::disconnectMessage(clientSocketUser[clientSocket]->getNombre()).dump()+'\0';
-
-            //add: desconexion de salas
 
             for(auto &socket: clientSocketUser){
                 if(socket.first != clientSocket){
-                    send(socket.first, requestAnswer.c_str(), requestAnswer.size(), 0);
+                    sendMessage(Message::disconnectMessage(clientSocketUser[clientSocket]->getNombre()), socket.first);
                 }
             }
 
             std::cout << "Cliente desconectado." << std::endl;
+            removeUserInformation(clientSocket);
             close(clientSocket);
-
-            removeUserFromRooms(clientSocket);
             break;
 
+
+        } else {
+            sendMessage(Message::noIdentifiedRequest(), clientSocket);
+            
+            if(clientSocketUser[clientSocket]) removeUserInformation(clientSocket);
+            close(clientSocket);
+            break;
 
         }
 
