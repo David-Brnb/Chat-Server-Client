@@ -19,7 +19,7 @@ public:
     static nlohmann::json createIdentifyResponse(std::string result, std::string &username) {
         return {
             {"type", "RESPONSE"},
-            {"request", "IDENTIFY"},
+            {"operation", "IDENTIFY"},
             {"result", result},
             {"extra", username}
         };
@@ -87,7 +87,7 @@ public:
     static nlohmann::json createNoSuchUserResponse(std::string &username) {
         return {
             {"type", "RESPONSE"},
-            {"request", "TEXT"},
+            {"operation", "TEXT"},
             {"result", "NO_SUCH_USER"},
             {"extra", username}
         };
@@ -122,7 +122,7 @@ public:
     static nlohmann::json createNewRoomResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"request", "NEW_ROOM"},
+            {"operation", "NEW_ROOM"},
             {"result", result},
             {"extra", extra}
         };
@@ -150,7 +150,7 @@ public:
     static nlohmann::json createInviteResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"request", "INVITE"},
+            {"operation", "INVITE"},
             {"result", result},
             {"extra", extra}
         };
@@ -168,7 +168,7 @@ public:
     static nlohmann::json createJoinRoomResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"request", "JOIN_ROOM"},
+            {"operation", "JOIN_ROOM"},
             {"result", result},
             {"extra", extra}
         };
@@ -204,7 +204,7 @@ public:
     static nlohmann::json createRoomUsersResponseNoSuchRoom(std::string &roomName) {
         return {
             {"type", "RESPONSE"},
-            {"request", "ROOM_USERS"},
+            {"operation", "ROOM_USERS"},
             {"result", "NO_SUCH_ROOM"},
             {"extra", roomName}
         };
@@ -214,7 +214,7 @@ public:
     static nlohmann::json createRoomUsersResponseNotJoined(std::string &roomName) {
         return {
             {"type", "RESPONSE"},
-            {"request", "ROOM_USERS"},
+            {"operation", "ROOM_USERS"},
             {"result", "NOT_JOINED"},
             {"extra", roomName}
         };
@@ -243,7 +243,7 @@ public:
     static nlohmann::json createRoomTextResponse(std::string &roomName, std::string &message) {
         return {
             {"type", "RESPONSE"},
-            {"request", "ROOM_TEXT"},
+            {"operation", "ROOM_TEXT"},
             {"result", message},
             {"extra", roomName}
         };

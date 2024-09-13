@@ -19,20 +19,19 @@ Client::~Client() {
 
 void Client::connectToServer() {
     int connectionStatus = connect(clientSocket, (struct sockaddr*)&serverAddress, sizeof(serverAddress));
-
+    
     if (connectionStatus < 0) {
-        std::cerr << "Error al conectarse al servidor\n";
-        exit(EXIT_FAILURE);
+        std::cerr << "Error al conectarse al servidor. Código de error: " << errno << std::endl;
+        exit(EXIT_FAILURE);  // Verifica si realmente necesitas salir aquí
     }
 
     connected = true;
     listenerThread = std::thread(&Client::listenForMessages, this);
-    std::cout << "Conectado al servidor!\n"; // Borrar
 }
 
 void Client::sendMessage(const nlohmann::json& message) {
     std::lock_guard<std::mutex> lock(socketMutex);
-    std::string msgString = message.dump();
+    std::string msgString = message.dump()+'\n';
     send(clientSocket, msgString.c_str(), msgString.size(), 0);
 }
 
@@ -70,17 +69,19 @@ void Client::listenForMessages() {
         }
 
         std::string answer;
+        std::cout << mensaje << std::endl;
 
         if(jsonMessage["type"] == "RESPONSE"){
             std::string user = jsonMessage["extra"];
             
-            if(jsonMessage["request"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
+            if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
+                std::cout << mensaje << std::endl;
                 answer = "El usuario " + user + " ha sido registrado con exito!";
                 std::cout << answer << std::endl;
 
                 registered = true;
 
-            } else if(jsonMessage["request"] == "IDENTIFY" && jsonMessage["result"] == "USER_ALREADY_EXISTS"){
+            } else if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "USER_ALREADY_EXISTS"){
                 answer = "El usuario " + user + " ya existe, ingrese otro nombre.";
                 std::cout << answer << std::endl;
                 registered = false;
@@ -132,36 +133,27 @@ void Client::listenForMessages() {
 
         }
 
-
-
     }
 }
 
 void Client::run() {
+
     std::string input;
 
     while (connected) {
 
-        if(!registered){
-            std::cout << "Ingrese su nombre de identificación: ";
-            //revisar el numerp de caracteres
-            std::cin >> input;
-
-
-            nlohmann::json message = Message::createIdentifyMessage(input);
-            sendMessage(message);
-
-            std::this_thread::sleep_for(std::chrono::milliseconds(700));
-
-            continue;
-
-        } 
-
         std::cin >> input;
 
         waiting = true; 
+        if(input == "/Identify" && !registered){
+            std::cout << "Ingrese su nombre de identificación: ";
+            std::cin >> input;
 
-        if(input == "/Status"){
+            nlohmann::json message = Message::createIdentifyMessage(input);
+            sendMessage(message);
+            std::cout << message.dump() << std::endl;
+
+        } else if(input == "/Status"){
             std::string newStatus; 
             std::cout << "Eliga un estatus de los listados: \n";
             std::cout << " * ACTIVE \n";
@@ -246,6 +238,8 @@ void Client::run() {
             disconnect();
             break;
 
+        } else {
+            std::cout << "Ingresa un comando valido " << std::endl;
         }
 
         if (input == "/exit") {
