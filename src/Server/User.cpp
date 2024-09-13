@@ -5,10 +5,6 @@ void User::setEstatus(std::string estatus){
     this->estatus = estatus;
 }
 
-void User::setSala(int sala){
-    this->sala = sala;
-}
-
 std::string User::getNombre(){
     return nombre;
 }
@@ -21,6 +17,11 @@ int User::getClientSocket(){
     return clientSocket;
 }
 
-int User::getSala(){
-    return sala;
+
+void User::insertaInvitacionSala(std::string sala){
+    roomInvitations.insert(sala);
+}
+
+bool User::contieneInvitacion(std::string sala){
+    return roomInvitations.count(sala) != 0;
 }

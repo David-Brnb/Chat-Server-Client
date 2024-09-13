@@ -2,6 +2,7 @@
 #define USER_H
 
 #include <string>
+#include <set>
 #include <nlohmann/json.hpp>
 
 struct User {
@@ -9,32 +10,27 @@ private:
     std::string nombre;
     std::string estatus;
     int clientSocket;
-    int sala; 
+    std::set<std::string> roomInvitations;
 
 public:
-    User() : nombre(""), estatus("inactivo"), clientSocket(-1), sala(0) {}
+    User() : nombre(""), estatus("inactivo"), clientSocket(-1) {}
     
-    User(std::string nombre,std::string estatus, int clientSocket, int sala){
+    User(std::string nombre,std::string estatus, int clientSocket){
         this->nombre = nombre;
         this->estatus = estatus;
         this->clientSocket = clientSocket;
-        this->sala = sala;
+        
     }
 
     void setEstatus(std::string estatus);
-    void setSala(int sala);
+    void insertaInvitacionSala(std::string sala);
 
 
     std::string getNombre();
     std::string getEstuatus();
     int getClientSocket();
-    int getSala();
 
-    // Método para convertir el objeto User a JSON
-    std::string toJSON() const;
-
-    // Método para inicializar un objeto User a partir de JSON
-    void fromJSON(std::string& jsonString);
+    bool contieneInvitacion(std::string sala);
 
 };
 

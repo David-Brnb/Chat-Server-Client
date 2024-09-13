@@ -4,6 +4,7 @@ project('chat-app', 'cpp', version : '1.0', default_options : ['cpp_std=c++17'])
 server_src = files(
   'src/server/Server.cpp',
   'src/server/User.cpp',
+  'src/server/Sala.cpp',
   'src/server/main_server.cpp'
 )
 

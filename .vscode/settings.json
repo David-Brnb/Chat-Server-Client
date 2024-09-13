@@ -55,6 +55,7 @@
         "iomanip": "cpp",
         "map": "cpp",
         "span": "cpp",
-        "valarray": "cpp"
+        "valarray": "cpp",
+        "set": "cpp"
     }
 }
