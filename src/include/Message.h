@@ -273,6 +273,37 @@ public:
         };
     }
 
+    // Método para crear un mensaje de no identificado
+    static nlohmann::json noIdentified() {
+        return {
+            {"type", "RESPONSE"},
+            {"request", "INVALID"}, 
+            {"result", "NOT_IDENTIFIED"}
+
+        };
+    }
+
+    // Método para crear un mensaje de no identificado
+    static nlohmann::json noIdentifiedRequest() {
+        return {
+            {"type", "RESPONSE"},
+            {"request", "INVALID"}, 
+            {"result", "NOT_IDENTIFIED"}
+
+        };
+    }
+
+
+    // Método para crear un mensaje de contenido incompleto
+    static nlohmann::json incompleteRequest() {
+        return {
+            {"type", "RESPONSE"},
+            {"request", "INVALID"}, 
+            {"result", "INVALID"}
+
+        };
+    }
+
 
 
 
