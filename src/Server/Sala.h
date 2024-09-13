@@ -12,7 +12,7 @@
 class Sala{
     private:
         int cantidadUsuarios;
-        std::map<std::string, std::string> clientNamesStatus;
+        std::map<std::string, std::shared_ptr<User> > clientNamesStatus;
 
     public:
     //Constructor, destructor y metodo de inicialización
@@ -22,11 +22,13 @@ class Sala{
         
     }
 
-    void agregarUsuario(User usr);
+    void agregarUsuario(std::shared_ptr<User> usr);
     void eliminarUsuario(std::string username);
 
-    std::map<std::string, std::string> verUsuarios();
+    std::map<std::string, std::shared_ptr<User>> verUsuarios();
+    std::map<std::string, std::string> obtenerEstatusUsuarios();
     bool contieneUsuario(std::string username);
+    int cantidadDeUsuarios();
 
 
 };

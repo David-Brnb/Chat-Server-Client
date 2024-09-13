@@ -31,7 +31,7 @@ void Client::connectToServer() {
 
 void Client::sendMessage(const nlohmann::json& message) {
     std::lock_guard<std::mutex> lock(socketMutex);
-    std::string msgString = message.dump()+'\n';
+    std::string msgString = message.dump()+'\0';
     send(clientSocket, msgString.c_str(), msgString.size(), 0);
 }
 
@@ -75,7 +75,7 @@ void Client::listenForMessages() {
             std::string user = jsonMessage["extra"];
             
             if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
-                std::cout << mensaje << std::endl;
+                // std::cout << mensaje << std::endl;
                 answer = "El usuario " + user + " ha sido registrado con exito!";
                 std::cout << answer << std::endl;
 

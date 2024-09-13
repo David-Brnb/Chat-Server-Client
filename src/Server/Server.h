@@ -31,7 +31,7 @@ class Server{
         std::unique_ptr<int> serverSocket;
         std::vector<std::thread> clients;
 
-        std::unordered_map<int, User> clientSocketUser;
+        std::unordered_map<int, std::shared_ptr<User> > clientSocketUser;
         std::unordered_map<std::string, int> clientUserSocket;
         std::unordered_set<std::string> rooms;
         std::unordered_map<std::string, Sala> nameRoom;
@@ -49,6 +49,7 @@ class Server{
         void handleClient(int clientSocket);
         void registerUsername();
         bool registerUser(int clientSocket, std::string username, std::string status);
+        void removeUserFromRooms(int clientSocket);
 
     public:
     //Constructor, destructor y metodo de inicialización

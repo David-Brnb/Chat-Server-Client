@@ -17,27 +17,9 @@ int User::getClientSocket(){
     return clientSocket;
 }
 
-void User::agregarSala(std::string sala){
-    this->rooms.insert(sala);
-
-}
-
-void User::salirDeSala(std::string sala){
-    this->rooms.erase(sala);
-
-}
-
-bool User::estaEnSala(std::string sala){
-    return rooms.count(sala) != 0;
-}
-
 
 void User::insertaInvitacionSala(std::string sala){
     roomInvitations.insert(sala);
-}
-
-void User::borraSalaInvitacion(std::string sala){
-    roomInvitations.erase(sala);
 }
 
 bool User::contieneInvitacion(std::string sala){

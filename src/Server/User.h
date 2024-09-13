@@ -11,7 +11,6 @@ private:
     std::string estatus;
     int clientSocket;
     std::set<std::string> roomInvitations;
-    std::set<std::string> rooms;
 
 public:
     User() : nombre(""), estatus("inactivo"), clientSocket(-1) {}
@@ -24,17 +23,13 @@ public:
     }
 
     void setEstatus(std::string estatus);
-    void agregarSala(std::string sala);
-    void salirDeSala(std::string sala);
     void insertaInvitacionSala(std::string sala);
-    void borraSalaInvitacion(std::string sala);
 
 
     std::string getNombre();
     std::string getEstuatus();
     int getClientSocket();
 
-    bool estaEnSala(std::string sala);
     bool contieneInvitacion(std::string sala);
 
 };

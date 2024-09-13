@@ -192,7 +192,7 @@ public:
     }
 
     // Método para crear un mensaje de ROOM_USER_LIST
-    static nlohmann::json createRoomUserListMessage(std::string &roomName, std::map<std::string, std::string> &users) {
+    static nlohmann::json createRoomUserListMessage(std::string &roomName, std::map<std::string, std::string> users) {
         return {
             {"type", "ROOM_USER_LIST"},
             {"roomname", roomName},
@@ -200,22 +200,12 @@ public:
         };
     }
 
-    // Método para crear un mensaje de respuesta a ROOM_USERS (si la sala no existe)
-    static nlohmann::json createRoomUsersResponseNoSuchRoom(std::string &roomName) {
+    // Método para crear un mensaje de respuesta a ROOM_USERS 
+    static nlohmann::json createRoomUsersResponseNo(std::string result, std::string &roomName) {
         return {
             {"type", "RESPONSE"},
             {"operation", "ROOM_USERS"},
-            {"result", "NO_SUCH_ROOM"},
-            {"extra", roomName}
-        };
-    }
-
-    // Método para crear un mensaje de respuesta a ROOM_USERS (si el usuario no se ha unido)
-    static nlohmann::json createRoomUsersResponseNotJoined(std::string &roomName) {
-        return {
-            {"type", "RESPONSE"},
-            {"operation", "ROOM_USERS"},
-            {"result", "NOT_JOINED"},
+            {"result", result},
             {"extra", roomName}
         };
     }
@@ -240,7 +230,26 @@ public:
     }
 
     // Método para crear un mensaje de respuesta a ROOM_TEXT(ocurrió un error)
-    static nlohmann::json createRoomTextResponse(std::string &roomName, std::string &message) {
+    static nlohmann::json createRoomTextResponse(std::string message, std::string &roomName) {
+        return {
+            {"type", "RESPONSE"},
+            {"operation", "ROOM_TEXT"},
+            {"result", message},
+            {"extra", roomName}
+        };
+    }
+
+    // Método para crear un mensaje de salida a los integrantes de la sala
+    static nlohmann::json createRoomText(std::string &roomName, std::string &username) {
+        return {
+            {"type", "LEFT_ROOM"},
+            {"roomname", roomName},
+            {"username", username},
+        };
+    }
+
+    // Método para crear un mensaje de respuesta a LEFT_ROOM(ocurrió un error)
+    static nlohmann::json leaveRoomResponse(std::string message, std::string &roomName) {
         return {
             {"type", "RESPONSE"},
             {"operation", "ROOM_TEXT"},
