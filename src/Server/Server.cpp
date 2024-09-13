@@ -94,12 +94,27 @@ void Server::removeUserInformation(int clientSocket) {
     std::string username = clientSocketUser[clientSocket]->getNombre();
     std::vector<std::string> deletedRooms;
 
+    for(auto &socket: clientSocketUser){
+        if(socket.first != clientSocket){
+            sendMessage(Message::disconnectMessage(clientSocketUser[clientSocket]->getNombre()), socket.first);
+        }
+    }
+
     // Iterar por todas las salas y eliminar al usuario
     for (auto& sala : nameRoom) {
         std::string roomname = sala.first;
-        Sala& currentRoom = sala.second;
+        Sala &currentRoom = sala.second;
 
-        currentRoom.eliminarUsuario(username);
+        if(roomname != "" && currentRoom.contieneUsuario(username)){
+            for(auto usr: currentRoom.verUsuarios()){
+                int currentSocket = clientUserSocket[usr.first];
+                sendMessage(Message::createRoomText(roomname, username), currentSocket);
+
+                currentRoom.eliminarUsuario(username);
+            }
+
+        }
+
         if (currentRoom.cantidadDeUsuarios() <= 0) {
             deletedRooms.push_back(roomname); // Agregar a la lista de salas a eliminar
         }
@@ -408,7 +423,7 @@ void Server::handleClient(int clientSocket){
 
             std::string roomname = jsonMessage["roomname"];
             std::string username = clientSocketUser[clientSocket]->getNombre();
-            Sala currentRoom = nameRoom[roomname];
+            Sala &currentRoom = nameRoom[roomname];
 
             if(rooms.count(roomname) > 0 && currentRoom.contieneUsuario(username)){
 
@@ -456,7 +471,7 @@ void Server::handleClient(int clientSocket){
             sendMessage(Message::noIdentifiedRequest(), clientSocket);
             
             if(clientSocketUser[clientSocket]) removeUserInformation(clientSocket);
-            close(clientSocket);
+            else close(clientSocket);
             break;
 
         }

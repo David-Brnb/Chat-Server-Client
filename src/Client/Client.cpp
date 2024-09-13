@@ -72,20 +72,22 @@ void Client::listenForMessages() {
         // std::cout << mensaje << std::endl;
 
         if(jsonMessage["type"] == "RESPONSE"){
+        std::cout << mensaje << std::endl;
+
             std::string user = jsonMessage["extra"];
             
-            if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
+            if(jsonMessage.contains("operation") && jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "SUCCESS"){
                 answer = "El usuario " + user + " ha sido registrado con exito!";
                 std::cout << answer << std::endl;
 
                 registered = true;
 
-            } else if(jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "USER_ALREADY_EXISTS"){
+            } else if(jsonMessage.contains("operation") && jsonMessage["operation"] == "IDENTIFY" && jsonMessage["result"] == "USER_ALREADY_EXISTS"){
                 answer = "El usuario " + user + " ya existe, ingrese otro nombre.";
                 std::cout << answer << std::endl;
                 registered = false;
 
-            } else if(jsonMessage["request"] == "Invalid"){
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "INVALID"){
                 if(jsonMessage["result"] == "NOT_IDENTIFIED"){
                     answer = "cerr: El usuario hizo request sin identificarse primero\n";
                     if(waiting) waitedMessages.push_back(answer);
@@ -97,6 +99,100 @@ void Client::listenForMessages() {
                     else std::cout << answer;
                 }
                 
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "NEW_ROOM"){
+                std::string sala = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "SUCCESS"){
+                    answer = "Sala " + sala + " creada con exito!\n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "ROOM_ALREADY_EXISTS"){
+                    answer = "La sala " + sala + " ya existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
+
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "INVITE"){
+                std::string extra = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "NO_SUCH_ROOM"){
+                    answer = "La sala " + extra + " no existe o no estras dentro. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NO_SUCH_USER"){
+                    answer = "El usuario " + extra + " no existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
+
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "JOIN_ROOM"){
+                std::string extra = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "SUCCESS"){
+                    answer = "has ingresado a la sala " + extra + "! \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NO_SUCH_ROOM"){
+                    answer = "La sala " + extra + " no existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NOT_INVITED"){
+                    answer = "No tienes invitacion para entrar a la sala: " + extra + ". \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
+
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "ROOM_USERS"){
+                std::string extra = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "NO_SUCH_ROOM"){
+                    answer = "La sala " + extra + " no existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NOT_JOINED"){
+                    answer = "No estas en la sala: " + extra + ". \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
+
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "ROOM_TEXT"){
+                std::string extra = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "NO_SUCH_ROOM"){
+                    answer = "La sala " + extra + " no existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NOT_JOINED"){
+                    answer = "No estas en la sala: " + extra + ". \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
+
+            } else if(jsonMessage.contains("request") && jsonMessage["request"] == "LEAVE_ROOM"){
+                std::string extra = jsonMessage["extra"];
+
+                if(jsonMessage["result"] == "NO_SUCH_ROOM"){
+                    answer = "La sala " + extra + " no existe. \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                } else if(jsonMessage["result"] == "NOT_JOINED"){
+                    answer = "No estas en la sala: " + extra + ". \n";
+                    if(waiting) waitedMessages.push_back(answer);
+                    else std::cout << answer;
+
+                }
             }
             
 
@@ -139,8 +235,47 @@ void Client::listenForMessages() {
             if(waiting) waitedMessages.push_back(answer);
             else std::cout << answer;
 
-        } else {
-            // std::cout << mensaje << "\n";
+        } else if(jsonMessage["type"] == "JOINED_ROOM") {
+            answer = jsonMessage["username"].get<std::string>() + " ingreso a la sala " + jsonMessage["roomname"].get<std::string>();
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
+        } else if(jsonMessage["type"] == "INVITATION") {
+            answer = jsonMessage["username"].get<std::string>() + " (Invitation): Unete a mi sala " + jsonMessage["roomname"].get<std::string>() + "!";
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
+        } else if(jsonMessage["type"] == "ROOM_TEXT_FROM") {
+            answer = jsonMessage["username"].get<std::string>() + " (Sala - " + jsonMessage["roomname"].get<std::string>() + "): " + jsonMessage["text"].get<std::string>();
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
+        } else if(jsonMessage["type"] == "LEFT_ROOM") {
+            answer =  "Sala (" + jsonMessage["roomname"].get<std::string>() + "): " + jsonMessage["username"].get<std::string>() + " dejo la sala :(";
+            answer += "\n";
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
+        } else if(jsonMessage["type"] == "ROOM_USER_LIST"){
+            answer = "-- Usuarios en la sala: " + jsonMessage["roomname"].get<std::string>() + " \n";
+            std::map<std::string, std::string> clientNamesStatus;
+            clientNamesStatus = jsonMessage["users"];
+
+            for(auto usr: clientNamesStatus){
+                answer+= "  " + usr.first + " : " + usr.second + "\n";
+            }
+
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
+
+        } else if(jsonMessage["type"] == "DISCONNECTED"){
+            answer = "Chat (general): " + jsonMessage["username"].get<std::string>() + " dejo el servidor. \n";
+            
+            if(waiting) waitedMessages.push_back(answer);
+            else std::cout << answer;
 
         }
 
@@ -262,27 +397,101 @@ void Client::run() {
 
         } else if(input == "/Create_Room"){
             while(true){
-                std::cout << "Ingrese su nombre de la Sala: ";
+                std::cout << "Ingrese el nombre de la Sala: ";
                 std::cin >> input;
 
-                if(input.size() > 8){
-                    std::cout << "err: Max 8 caracteres \n";
+                if(input.size() > 16){
+                    std::cout << "err: Max 16 caracteres \n";
 
                 } else {
                     break;
                 }
             }
 
+            nlohmann::json message = Message::createNewRoomMessage(input);
+            sendMessage(message);
 
 
-        } else if(false){
+        } else if(input == "/Invite_Room"){
+            std::string sala, line; 
+            std::vector<std::string> users;
+
+            std::cout << "Ingrese el nombre de la Sala: ";
+            std::cin >> sala;
+
+            // Limpiar el buffer de entrada después de usar std::cin
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+            std::cout << "Ingrese (en lineas diferentes) el nombre de los Usuarios a invitar presiona ENTER en una línea vacía para finalizar): \n";
             
-        } else if(false){
+            while (true) {
+                std::getline(std::cin, line);
+
+                if (line.empty()) {  
+                    break;
+                }
+
+                if(line != "")users.push_back(line);
+            }
+
+            nlohmann::json message = Message::createInviteMessage(sala, users);
+            sendMessage(message);
+
             
-        } else if(false){
+        } else if(input == "/Join_Room"){
+            std::string sala; 
+
+            std::cout << "Ingrese el nombre de la Sala a unirse: ";
+            std::cin >> sala;
+
+            nlohmann::json message = Message::createJoinRoomMessage(sala);
+            sendMessage(message);
+
             
-        } else if(false){
+        } else if(input == "/Room_Users"){
+            std::string sala; 
+
+            std::cout << "Ingrese el nombre de la Sala a consultar: ";
+            std::cin >> sala;
+
+            nlohmann::json message = Message::createRoomUsersMessage(sala);
+            sendMessage(message);
             
+        } else if(input == "/Room_Text"){
+            std::string sala, line, fullMessage;
+
+            std::cout << "Ingrese el nombre de la Sala: ";
+            std::cin >> sala;
+
+            // Limpiar el buffer de entrada después de usar std::cin
+            std::cin.ignore(std::numeric_limits<std::streamsize>::max(), '\n');
+
+            std::cout << "Escribe tu mensaje (presiona ENTER en una línea vacía para finalizar):" << std::endl;
+
+            
+            while (true) {
+                std::getline(std::cin, line);
+
+                if (line.empty()) {  
+                    break;
+                }
+
+                if(line != "") fullMessage += line + '\n';
+            }
+
+            nlohmann::json message = Message::createRoomTextRequest(sala, fullMessage);
+            sendMessage(message);
+
+
+            
+        } else if(input == "/Leave_Room"){
+            std::string sala;
+
+            std::cout << "Ingrese el nombre de la Sala: ";
+            std::cin >> sala;
+
+            nlohmann::json message = Message::leaveRoom(sala);
+            sendMessage(message);
+
         } else if(input == "/Disconnect"){
             nlohmann::json message = Message::disconnectRequest();
             sendMessage(message);
