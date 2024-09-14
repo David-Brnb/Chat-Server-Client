@@ -69,8 +69,11 @@ void Client::listenForMessages() {
         }
 
         std::string answer;
-        // std::cout << mensaje << std::endl;
 
+        
+        /*
+        Se comienza la cadena de identificadores para la respuesta que de el server a distintos requests
+        */
         if(jsonMessage["type"] == "RESPONSE"){
         std::cout << mensaje << std::endl;
 
@@ -290,7 +293,11 @@ void Client::run() {
 
         std::cin >> input;
 
+        // Variable para no mostrar mensajes mientras el usuario interactua
         waiting = true; 
+        /*
+        Se comienza la cadena de identificadores para el request del usuario
+        */
         if(input == "/Identify" && !registered){
             while(true){
                 std::cout << "Ingrese su nombre de identificación: ";
@@ -504,6 +511,7 @@ void Client::run() {
 
         waiting = false; 
 
+        // Se imprimen los mensajes recibidos mientras el usr agrega informacion
         for(auto ans: waitedMessages){
             std::cout << ans;
         }
