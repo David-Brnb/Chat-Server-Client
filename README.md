@@ -56,6 +56,13 @@ make run-client
 ```
 
 
+## Instrucciones del Servidor
+
+Después de ejecutar el servidor este iniciara en el puerto **1024**. 
+
+El puerto puede ser cambiado en la clase `main_server.cpp`. 
+
+
 ## Instrucciones del Cliente
 
 Después de ejecutar el cliente y conectarte al servidor, puedes usar los siguientes comandos para interactuar con el sistema de chat (ingresa el comando y presiona ENTER):
