@@ -58,7 +58,7 @@ make run-client
 
 ## Instrucciones del Cliente
 
-Después de ejecutar el cliente y conectarte al servidor, puedes usar los siguientes comandos para interactuar con el sistema de chat:
+Después de ejecutar el cliente y conectarte al servidor, puedes usar los siguientes comandos para interactuar con el sistema de chat (ingresa el comando y presiona ENTER):
 
 ### Comandos disponibles
 
