@@ -47,6 +47,7 @@ void Server::start() {
     acceptClients();  // Inicia la aceptación de clientes
 }
 
+
 void Server::sendMessage(const nlohmann::json& message, int destinitySocket) {
     std::lock_guard<std::mutex> lock(clientsMutex);
     std::string msgString = message.dump()+'\0';
@@ -63,7 +64,7 @@ bool Server::registerUser(int clientSocket, std::string username, std::string st
     }
 
     // Crear un nuevo usuario y agregarlo al mapa
-    std::shared_ptr<User> newUser = std::make_shared<User>(username, status, clientSocket);  // Sala inicial 0
+    std::shared_ptr<User> newUser = std::make_shared<User>(username, status, clientSocket);  
 
     clientSocketUser[clientSocket] = newUser;
     clientUserSocket[username] = clientSocket;
@@ -172,9 +173,6 @@ void Server::handleClient(int clientSocket){
             jsonMessage = nlohmann::json::parse(buffer);
 
         } catch (nlohmann::json::parse_error& e) {
-            /*
-            * revisar el cierre bien
-            */
             std::cerr << "Error al parsear JSON: " << e.what() << std::endl;
             std::cout << "Cliente desconectado." << std::endl;
             close(clientSocket);
@@ -191,14 +189,14 @@ void Server::handleClient(int clientSocket){
         Cadena de condicionales donde se realiza el procesamiento de requests por parte del server
         */
         if(type == "IDENTIFY"){
-            if (!jsonMessage.contains("username") ) {
+            if (!jsonMessage.contains("username") || jsonMessage["username"].size() > 8) {
                 handleInvalidRequest(clientSocket);
                 break;
             }
 
             std::string username = jsonMessage["username"], promptName;
 
-            if(registerUser(clientSocket, username, "Active")){
+            if(registerUser(clientSocket, username, "ACTIVE")){
                 sendMessage(Message::createIdentifyResponse("SUCCESS", username), clientSocket);
 
                 for(auto &socket: clientSocketUser){
@@ -277,7 +275,7 @@ void Server::handleClient(int clientSocket){
 
 
         } else if(type == "NEW_ROOM"){
-            if (!jsonMessage.contains("roomname")) {
+            if (!jsonMessage.contains("roomname") || jsonMessage["roomname"].size()>16) {
                 handleInvalidRequest(clientSocket);
                 break;
             }
