@@ -122,7 +122,7 @@ public:
     static nlohmann::json createNewRoomResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "NEW_ROOM"},
+            {"request", "NEW_ROOM"},
             {"result", result},
             {"extra", extra}
         };
@@ -150,7 +150,7 @@ public:
     static nlohmann::json createInviteResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "INVITE"},
+            {"request", "INVITE"},
             {"result", result},
             {"extra", extra}
         };
@@ -168,7 +168,7 @@ public:
     static nlohmann::json createJoinRoomResponse(std::string extra, std::string result) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "JOIN_ROOM"},
+            {"request", "JOIN_ROOM"},
             {"result", result},
             {"extra", extra}
         };
@@ -204,7 +204,7 @@ public:
     static nlohmann::json createRoomUsersResponseNo(std::string result, std::string &roomName) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "ROOM_USERS"},
+            {"request", "ROOM_USERS"},
             {"result", result},
             {"extra", roomName}
         };
@@ -233,7 +233,7 @@ public:
     static nlohmann::json createRoomTextResponse(std::string message, std::string &roomName) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "ROOM_TEXT"},
+            {"request", "ROOM_TEXT"},
             {"result", message},
             {"extra", roomName}
         };
@@ -248,11 +248,19 @@ public:
         };
     }
 
+    // Método para crear un mensaje de respuesta a LEFT_ROOM
+    static nlohmann::json leaveRoom(std::string sala) {
+        return {
+            {"type", "LEAVE_ROOM"},
+            {"roomname", sala}
+        };
+    }
+
     // Método para crear un mensaje de respuesta a LEFT_ROOM(ocurrió un error)
     static nlohmann::json leaveRoomResponse(std::string message, std::string &roomName) {
         return {
             {"type", "RESPONSE"},
-            {"operation", "ROOM_TEXT"},
+            {"request", "ROOM_TEXT"},
             {"result", message},
             {"extra", roomName}
         };
@@ -268,7 +276,7 @@ public:
     // Método para crear un mensaje de desconexion a los usuarios
     static nlohmann::json disconnectMessage(std::string username) {
         return {
-            {"type", "DISCONNECT"},
+            {"type", "DISCONNECTED"},
             {"username", username}
         };
     }
